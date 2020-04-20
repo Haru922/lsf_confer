@@ -6,13 +6,25 @@ lsf_get_confer (char *config_path,
 {
   GError *error = NULL;
 
-  if (reload_flag)
+  if (confer != NULL)
   {
-    g_key_file_free (confer->key_file);
+    if (reload_flag)
+    {
+      g_key_file_free (confer->key_file);
+    }
+    else
+    {
+      if ((g_key_file_get_start_group (confer->key_file)) != NULL)
+      {
+        return confer;
+      }
+      g_key_file_free (confer->key_file);
+    }
   }
-  else if (confer != NULL)
+
+  if (config_path == NULL)
   {
-    return confer;
+    config_path = LSF_CONFER_CONFIG;
   }
 
   confer = (Confer *) malloc (sizeof (Confer));
@@ -45,7 +57,7 @@ lsf_confer_get_str (char *section,
                     char *key)
 {
   GError *error = NULL;
-  gchar *value;
+  gchar  *value = NULL;
 
   if (confer->key_file == NULL) 
   {
@@ -76,3 +88,63 @@ lsf_confer_get_str (char *section,
 
   return value;
 }
+
+void
+lsf_confer_set_str (char *section,
+                    char *key,
+                    char *value)
+{
+  g_key_file_set_string (confer->key_file,
+                         section,
+                         key,
+                         value);
+}
+
+gboolean
+lsf_confer_save (char *output_path)
+{
+  GError *error = NULL;
+
+  if (output_path == NULL)
+  {
+    output_path = LSF_CONFER_CONFIG;
+  }
+
+  if (!g_key_file_save_to_file (confer->key_file, output_path, &error))
+  {
+    g_error ("Cannot save the contents: %s\n", error->message);
+    g_error_free (error);
+    return FALSE;
+  }
+  return TRUE;
+}
+
+gboolean
+lsf_confer_remove_section (char *group_name)
+{
+  GError *error = NULL;
+
+  if (!g_key_file_remove_group (confer->key_file, group_name, &error))
+  {
+    g_print ("Cannot remove the section[%s]: %s\n", group_name, error->message);
+    g_error_free (error);
+    return FALSE;
+  }
+  return TRUE;
+}
+
+gboolean
+lsf_confer_remove_key (char *group_name,
+                       char *key_name)
+{
+  GError *error = NULL;
+
+  if (!g_key_file_remove_key (confer->key_file, group_name, key_name, &error))
+  {
+    g_print ("Cannot remove the key[%s / %s]: %s\n", group_name, key_name, error->message);
+    g_error_free (error);
+    return FALSE;
+  }
+  return TRUE;
+}
+

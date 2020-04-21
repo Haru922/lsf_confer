@@ -8,7 +8,7 @@ lsf_get_confer (char *config_path,
 
   if (confer != NULL)
   {
-    if (reload_flag)
+    if (reload_flag == CONFER_RELOAD_TRUE)
     {
       g_key_file_free (confer->key_file);
     }
@@ -36,7 +36,7 @@ lsf_get_confer (char *config_path,
     if (!g_error_matches (error, G_FILE_ERROR, G_FILE_ERROR_NOENT)
         || !g_error_matches (error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_NOT_FOUND))
     {
-      g_error ("Error loading key file: %s\n", error->message);
+      g_print ("Error loading key file: %s\n", error->message);
     }
     g_error_free (error);
 
@@ -50,6 +50,26 @@ lsf_confer_free (void)
 {
   g_key_file_free (confer->key_file);
   free (confer);
+}
+
+void
+lsf_confer_util_error_print (GError *error)
+{
+  if (error != NULL) {
+    if (!g_error_matches (error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_GROUP_NOT_FOUND))
+    {
+      g_print ("Error finding section in key file: %s\n", error->message);
+    }
+    else if (!g_error_matches (error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_KEY_NOT_FOUND))
+    {
+      g_print ("Error finding key in key file: %s\n", error->message);
+    }
+    else if (!g_error_matches (error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_INVALID_VALUE))
+    {
+      g_print ("Invalid value found: %s\n", error->message);
+    }
+    g_error_free (error);
+  }
 }
 
 gchar *
@@ -69,15 +89,9 @@ lsf_confer_get_str (char *section,
 
   if (value == NULL)
   {
-    if (!g_error_matches (error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_GROUP_NOT_FOUND))
+    if (error != NULL)
     {
-      g_error ("Error finding section in key file: %s\n", error->message);
-      g_error_free (error);
-    }
-    else if (!g_error_matches (error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_KEY_NOT_FOUND))
-    {
-      g_error ("Error finding key in key file: %s\n", error->message);
-      g_error_free (error);
+      lsf_confer_util_error_print (error);
     }
     else
     {
@@ -86,6 +100,35 @@ lsf_confer_get_str (char *section,
     return NULL;
   }
 
+  return value;
+}
+
+gint
+lsf_confer_get_integer (char *section,
+                        char *key)
+{
+  GError *error = NULL;
+  gint    value = 0;
+
+  if (confer->key_file == NULL)
+  {
+    g_print ("Cannot read the key file..");
+    return value;
+  }
+
+  value = g_key_file_get_integer (confer->key_file, section, key, &error);
+
+  if (!value)
+  {
+    if (error != NULL)
+    {
+      lsf_confer_util_error_print (error);
+    }
+    else
+    {
+      g_warning ("No Value for the Section:[%s]\nKey:%s.\n", section, key);
+    }
+  }
   return value;
 }
 
@@ -101,18 +144,13 @@ lsf_confer_set_str (char *section,
 }
 
 gboolean
-lsf_confer_save (char *output_path)
+lsf_confer_save ()
 {
   GError *error = NULL;
 
-  if (output_path == NULL)
+  if (!g_key_file_save_to_file (confer->key_file, LSF_CONFER_CONFIG, &error))
   {
-    output_path = LSF_CONFER_CONFIG;
-  }
-
-  if (!g_key_file_save_to_file (confer->key_file, output_path, &error))
-  {
-    g_error ("Cannot save the contents: %s\n", error->message);
+    g_print ("Cannot save the contents: %s\n", error->message);
     g_error_free (error);
     return FALSE;
   }
@@ -147,4 +185,3 @@ lsf_confer_remove_key (char *group_name,
   }
   return TRUE;
 }
-

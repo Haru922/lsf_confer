@@ -1,4 +1,5 @@
-#include "lsf_confer.h"
+#include "lsf-confer.h"
+#include <glib/gprintf.h>
 
 Confer *
 lsf_get_confer (char *config_path,
@@ -52,8 +53,8 @@ lsf_confer_free (void)
   free (confer);
 }
 
-void
-lsf_confer_util_error_print (GError *error)
+static void
+confer_util_error_print (GError *error)
 {
   if (error != NULL) {
     if (!g_error_matches (error, G_KEY_FILE_ERROR, G_KEY_FILE_ERROR_GROUP_NOT_FOUND))
@@ -91,7 +92,7 @@ lsf_confer_get_str (char *section,
   {
     if (error != NULL)
     {
-      lsf_confer_util_error_print (error);
+      confer_util_error_print (error);
     }
     else
     {
@@ -122,7 +123,7 @@ lsf_confer_get_integer (char *section,
   {
     if (error != NULL)
     {
-      lsf_confer_util_error_print (error);
+      confer_util_error_print (error);
     }
     else
     {
